@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formula Calculator</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        input, button { margin: 10px 0; padding: 10px; }
+        .output { margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Formula Calculator</h1>
+    <p>Enter the values:</p>
+    <label>x_ratio: <input type="number" id="x_ratio" step="0.01"></label><br>
+    <label>angle_degrees_max: <input type="number" id="angle_degrees_max" step="0.01"></label><br>
+    <label>wh_ratio: <input type="number" id="wh_ratio" step="0.01"></label><br>
+    <label>convex_defection: <input type="number" id="convex_defection" step="0.01"></label><br>
+    <label>lr_balance: <input type="number" id="lr_balance" step="0.01"></label><br>
+    <button onclick="calculate()">Calculate</button>
+    <div class="output" id="output"></div>
+
+    <script>
+        async function loadPyodideAndPackages() {
+            const pyodide = await loadPyodide();
+            await pyodide.loadPackage("numpy");
+            return pyodide;
+        }
+
+        let pyodideReady = loadPyodideAndPackages();
+
+        async function calculate() {
+            const pyodide = await pyodideReady;
+
+            // Get user inputs
+            const x_ratio = parseFloat(document.getElementById('x_ratio').value);
+            const angle_degrees_max = parseFloat(document.getElementById('angle_degrees_max').value);
+            const wh_ratio = parseFloat(document.getElementById('wh_ratio').value);
+            const convex_defection = parseFloat(document.getElementById('convex_defection').value);
+            const lr_balance = parseFloat(document.getElementById('lr_balance').value);
+
+            // Python script to calculate the formula
+            const pythonCode = `
+import numpy as np
+x_ratio = ${x_ratio}
+angle_degrees_max = ${angle_degrees_max}
+wh_ratio = ${wh_ratio}
+convex_defection = ${convex_defection}
+lr_balance = ${lr_balance}
+
+clipped_width = np.clip(x_ratio, 225, 520)
+scaled_width = (clipped_width - 225) / (520 - 225)
+
+clipped_skew = np.clip(angle_degrees_max, 0, 17)
+scaled_skew = (clipped_skew - 0) / (17 - 0)
+
+clipped_long = np.clip(wh_ratio, 1, 2)
+scaled_long = (clipped_long - 1) / (2 - 1)
+
+clipped_concave = np.clip(convex_defection, 100, 2340)
+scaled_concave = (clipped_concave - 100) / (2340 - 100)
+
+clipped_balance = np.clip(lr_balance, 1, 2)
+scaled_balance = (clipped_balance - 1) / (2 - 1)
+
+results = {
+    "scaled_width": scaled_width,
+    "scaled_skew": scaled_skew,
+    "scaled_long": scaled_long,
+    "scaled_concave": scaled_concave,
+    "scaled_balance": scaled_balance
+}
+results
+            `;
+
+            // Run Python code in Pyodide
+            const results = await pyodide.runPythonAsync(pythonCode);
+
+            // Display results
+            document.getElementById('output').innerHTML = `
+                <p>Scaled Width: ${results.scaled_width.toFixed(4)}</p>
+                <p>Scaled Skew: ${results.scaled_skew.toFixed(4)}</p>
+                <p>Scaled Long: ${results.scaled_long.toFixed(4)}</p>
+                <p>Scaled Concave: ${results.scaled_concave.toFixed(4)}</p>
+                <p>Scaled Balance: ${results.scaled_balance.toFixed(4)}</p>
+            `;
+        }
+    </script>
+</body>
+</html>
