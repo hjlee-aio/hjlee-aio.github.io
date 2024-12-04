@@ -35,76 +35,62 @@
         async function calculate() {
             const pyodide = await pyodideReady;
 
-            // Get user inputs and validate
+            // Get user inputs
             const x_ratio = parseFloat(document.getElementById('x_ratio').value || 0);
             const angle_degrees_max = parseFloat(document.getElementById('angle_degrees_max').value || 0);
             const wh_ratio = parseFloat(document.getElementById('wh_ratio').value || 0);
             const convex_defection = parseFloat(document.getElementById('convex_defection').value || 0);
             const lr_balance = parseFloat(document.getElementById('lr_balance').value || 0);
 
-            if (isNaN(x_ratio) || isNaN(angle_degrees_max) || isNaN(wh_ratio) || isNaN(convex_defection) || isNaN(lr_balance)) {
-                document.getElementById('output').innerHTML = "<p>Please enter valid numbers!</p>";
-                return;
-            }
-
-            // Python script to calculate the formula
+            // Python script
             const pythonCode = `
-        import numpy as np
-        import json
+                import numpy as np
+                import json
 
-        x_ratio = ${x_ratio}
-        angle_degrees_max = ${angle_degrees_max}
-        wh_ratio = ${wh_ratio}
-        convex_defection = ${convex_defection}
-        lr_balance = ${lr_balance}
+                x_ratio = ${x_ratio}
+                angle_degrees_max = ${angle_degrees_max}
+                wh_ratio = ${wh_ratio}
+                convex_defection = ${convex_defection}
+                lr_balance = ${lr_balance}
 
-        # Width scaling
-        clipped_width = np.clip(x_ratio, 225, 520)
-        scaled_width = (clipped_width - 225) / (520 - 225)
+                clipped_width = np.clip(x_ratio, 225, 520)
+                scaled_width = (clipped_width - 225) / (520 - 225)
 
-        # Skew scaling
-        clipped_skew = np.clip(angle_degrees_max, 0, 17)
-        scaled_skew = (clipped_skew - 0) / (17 - 0)
+                clipped_skew = np.clip(angle_degrees_max, 0, 17)
+                scaled_skew = (clipped_skew - 0) / (17 - 0)
 
-        # Long scaling
-        clipped_long = np.clip(wh_ratio, 1, 2)
-        scaled_long = (clipped_long - 1) / (2 - 1)
+                clipped_long = np.clip(wh_ratio, 1, 2)
+                scaled_long = (clipped_long - 1) / (2 - 1)
 
-        # Concave scaling
-        clipped_concave = np.clip(convex_defection, 100, 2340)
-        scaled_concave = (clipped_concave - 100) / (2340 - 100)
+                clipped_concave = np.clip(convex_defection, 100, 2340)
+                scaled_concave = (clipped_concave - 100) / (2340 - 100)
 
-        # Balance scaling
-        clipped_balance = np.clip(lr_balance, 1, 2)
-        scaled_balance = (clipped_balance - 1) / (2 - 1)
+                clipped_balance = np.clip(lr_balance, 1, 2)
+                scaled_balance = (clipped_balance - 1) / (2 - 1)
 
-        # Convert results to JSON
-        json.dumps({
-            "scaled_width": scaled_width,
-            "scaled_skew": scaled_skew,
-            "scaled_long": scaled_long,
-            "scaled_concave": scaled_concave,
-            "scaled_balance": scaled_balance
-        })
+                json.dumps({
+                    "scaled_width": scaled_width,
+                    "scaled_skew": scaled_skew,
+                    "scaled_long": scaled_long,
+                    "scaled_concave": scaled_concave,
+                    "scaled_balance": scaled_balance
+                })
             `;
 
             try {
-                // Run Python code
                 const resultsJson = await pyodide.runPythonAsync(pythonCode);
                 console.log("Raw JSON from Python:", resultsJson);
 
-                // Parse JSON output
                 const results = JSON.parse(resultsJson);
                 console.log("Parsed Results:", results);
 
-                // Safeguard against undefined values
+                // Safeguard undefined values
                 const scaledWidth = results.scaled_width ?? 0;
                 const scaledSkew = results.scaled_skew ?? 0;
                 const scaledLong = results.scaled_long ?? 0;
                 const scaledConcave = results.scaled_concave ?? 0;
                 const scaledBalance = results.scaled_balance ?? 0;
 
-                // Display results
                 document.getElementById('output').innerHTML = `
                     <p>Scaled Width: ${scaledWidth.toFixed(4)}</p>
                     <p>Scaled Skew: ${scaledSkew.toFixed(4)}</p>
