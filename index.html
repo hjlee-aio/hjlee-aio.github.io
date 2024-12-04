@@ -33,90 +33,87 @@
         let pyodideReady = loadPyodideAndPackages();
 
         async function calculate() {
-    const pyodide = await pyodideReady;
+            const pyodide = await pyodideReady;
 
-    // Get user inputs and validate
-    const x_ratio = parseFloat(document.getElementById('x_ratio').value || 0);
-    const angle_degrees_max = parseFloat(document.getElementById('angle_degrees_max').value || 0);
-    const wh_ratio = parseFloat(document.getElementById('wh_ratio').value || 0);
-    const convex_defection = parseFloat(document.getElementById('convex_defection').value || 0);
-    const lr_balance = parseFloat(document.getElementById('lr_balance').value || 0);
+            // Get user inputs and validate
+            const x_ratio = parseFloat(document.getElementById('x_ratio').value || 0);
+            const angle_degrees_max = parseFloat(document.getElementById('angle_degrees_max').value || 0);
+            const wh_ratio = parseFloat(document.getElementById('wh_ratio').value || 0);
+            const convex_defection = parseFloat(document.getElementById('convex_defection').value || 0);
+            const lr_balance = parseFloat(document.getElementById('lr_balance').value || 0);
 
-    if (isNaN(x_ratio) || isNaN(angle_degrees_max) || isNaN(wh_ratio) || isNaN(convex_defection) || isNaN(lr_balance)) {
-        document.getElementById('output').innerHTML = "<p>Please enter valid numbers!</p>";
-        return;
-    }
+            if (isNaN(x_ratio) || isNaN(angle_degrees_max) || isNaN(wh_ratio) || isNaN(convex_defection) || isNaN(lr_balance)) {
+                document.getElementById('output').innerHTML = "<p>Please enter valid numbers!</p>";
+                return;
+            }
 
-    // Python script to calculate the formula
-    const pythonCode = `
-import numpy as np
-import json
+            // Python script to calculate the formula
+            const pythonCode = `
+        import numpy as np
+        import json
 
-x_ratio = ${x_ratio}
-angle_degrees_max = ${angle_degrees_max}
-wh_ratio = ${wh_ratio}
-convex_defection = ${convex_defection}
-lr_balance = ${lr_balance}
+        x_ratio = ${x_ratio}
+        angle_degrees_max = ${angle_degrees_max}
+        wh_ratio = ${wh_ratio}
+        convex_defection = ${convex_defection}
+        lr_balance = ${lr_balance}
 
-# Width scaling
-clipped_width = np.clip(x_ratio, 225, 520)
-scaled_width = (clipped_width - 225) / (520 - 225)
+        # Width scaling
+        clipped_width = np.clip(x_ratio, 225, 520)
+        scaled_width = (clipped_width - 225) / (520 - 225)
 
-# Skew scaling
-clipped_skew = np.clip(angle_degrees_max, 0, 17)
-scaled_skew = (clipped_skew - 0) / (17 - 0)
+        # Skew scaling
+        clipped_skew = np.clip(angle_degrees_max, 0, 17)
+        scaled_skew = (clipped_skew - 0) / (17 - 0)
 
-# Long scaling
-clipped_long = np.clip(wh_ratio, 1, 2)
-scaled_long = (clipped_long - 1) / (2 - 1)
+        # Long scaling
+        clipped_long = np.clip(wh_ratio, 1, 2)
+        scaled_long = (clipped_long - 1) / (2 - 1)
 
-# Concave scaling
-clipped_concave = np.clip(convex_defection, 100, 2340)
-scaled_concave = (clipped_concave - 100) / (2340 - 100)
+        # Concave scaling
+        clipped_concave = np.clip(convex_defection, 100, 2340)
+        scaled_concave = (clipped_concave - 100) / (2340 - 100)
 
-# Balance scaling
-clipped_balance = np.clip(lr_balance, 1, 2)
-scaled_balance = (clipped_balance - 1) / (2 - 1)
+        # Balance scaling
+        clipped_balance = np.clip(lr_balance, 1, 2)
+        scaled_balance = (clipped_balance - 1) / (2 - 1)
 
-# Convert results to JSON
-json.dumps({
-    "scaled_width": scaled_width,
-    "scaled_skew": scaled_skew,
-    "scaled_long": scaled_long,
-    "scaled_concave": scaled_concave,
-    "scaled_balance": scaled_balance
-})
-    `;
+        # Convert results to JSON
+        json.dumps({
+            "scaled_width": scaled_width,
+            "scaled_skew": scaled_skew,
+            "scaled_long": scaled_long,
+            "scaled_concave": scaled_concave,
+            "scaled_balance": scaled_balance
+        })
+            `;
 
-    try {
-        const resultsJson = await pyodide.runPythonAsync(pythonCode);
-        console.log("Raw JSON:", resultsJson);
+            try {
+                // Run Python code
+                const resultsJson = await pyodide.runPythonAsync(pythonCode);
+                console.log("Raw JSON from Python:", resultsJson);
 
-        const results = JSON.parse(resultsJson);
-        console.log("Parsed Results:", results);
+                // Parse JSON output
+                const results = JSON.parse(resultsJson);
+                console.log("Parsed Results:", results);
 
-        if (
-            results.scaled_width === undefined ||
-            results.scaled_skew === undefined ||
-            results.scaled_long === undefined ||
-            results.scaled_concave === undefined ||
-            results.scaled_balance === undefined
-        ) {
-            console.error("Missing values in results:", results);
-            document.getElementById('output').innerHTML = `<p>Error: Missing values in the result. Check the console for details.</p>`;
-            return;
+                // Safeguard against undefined values
+                const scaledWidth = results.scaled_width ?? 0;
+                const scaledSkew = results.scaled_skew ?? 0;
+                const scaledLong = results.scaled_long ?? 0;
+                const scaledConcave = results.scaled_concave ?? 0;
+                const scaledBalance = results.scaled_balance ?? 0;
+
+                // Display results
+                document.getElementById('output').innerHTML = `
+                    <p>Scaled Width: ${scaledWidth.toFixed(4)}</p>
+                    <p>Scaled Skew: ${scaledSkew.toFixed(4)}</p>
+                    <p>Scaled Long: ${scaledLong.toFixed(4)}</p>
+                    <p>Scaled Concave: ${scaledConcave.toFixed(4)}</p>
+                    <p>Scaled Balance: ${scaledBalance.toFixed(4)}</p>
+                `;
+            } catch (error) {
+                console.error("Error during calculation:", error);
+                document.getElementById('output').innerHTML = `<p>Error calculating results. Check the console for details.</p>`;
+            }
         }
-
-        // Display results
-        document.getElementById('output').innerHTML = `
-            <p>Scaled Width: ${results.scaled_width.toFixed(4)}</p>
-            <p>Scaled Skew: ${results.scaled_skew.toFixed(4)}</p>
-            <p>Scaled Long: ${results.scaled_long.toFixed(4)}</p>
-            <p>Scaled Concave: ${results.scaled_concave.toFixed(4)}</p>
-            <p>Scaled Balance: ${results.scaled_balance.toFixed(4)}</p>
-        `;
-    } catch (error) {
-        console.error("Error during calculation:", error);
-        document.getElementById('output').innerHTML = `<p>Error calculating results. Check the console for details.</p>`;
-    }
-}
