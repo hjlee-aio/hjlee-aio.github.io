@@ -25,7 +25,8 @@
     <script>
         async function loadPyodideAndPackages() {
             const pyodide = await loadPyodide();
-            await pyodide.loadPackage("numpy");
+            await pyodide.loadPackage("numpy"); // Load NumPy for calculations
+            console.log("Pyodide loaded!");
             return pyodide;
         }
 
@@ -34,12 +35,17 @@
         async function calculate() {
             const pyodide = await pyodideReady;
 
-            // Get user inputs
-            const x_ratio = parseFloat(document.getElementById('x_ratio').value);
-            const angle_degrees_max = parseFloat(document.getElementById('angle_degrees_max').value);
-            const wh_ratio = parseFloat(document.getElementById('wh_ratio').value);
-            const convex_defection = parseFloat(document.getElementById('convex_defection').value);
-            const lr_balance = parseFloat(document.getElementById('lr_balance').value);
+            // Get user inputs and validate
+            const x_ratio = parseFloat(document.getElementById('x_ratio').value || 0);
+            const angle_degrees_max = parseFloat(document.getElementById('angle_degrees_max').value || 0);
+            const wh_ratio = parseFloat(document.getElementById('wh_ratio').value || 0);
+            const convex_defection = parseFloat(document.getElementById('convex_defection').value || 0);
+            const lr_balance = parseFloat(document.getElementById('lr_balance').value || 0);
+
+            if (isNaN(x_ratio) || isNaN(angle_degrees_max) || isNaN(wh_ratio) || isNaN(convex_defection) || isNaN(lr_balance)) {
+                document.getElementById('output').innerHTML = "<p>Please enter valid numbers!</p>";
+                return;
+            }
 
             // Python script to calculate the formula
             const pythonCode = `
@@ -50,42 +56,50 @@ wh_ratio = ${wh_ratio}
 convex_defection = ${convex_defection}
 lr_balance = ${lr_balance}
 
+# Width scaling
 clipped_width = np.clip(x_ratio, 225, 520)
 scaled_width = (clipped_width - 225) / (520 - 225)
 
+# Skew scaling
 clipped_skew = np.clip(angle_degrees_max, 0, 17)
 scaled_skew = (clipped_skew - 0) / (17 - 0)
 
+# Long scaling
 clipped_long = np.clip(wh_ratio, 1, 2)
 scaled_long = (clipped_long - 1) / (2 - 1)
 
+# Concave scaling
 clipped_concave = np.clip(convex_defection, 100, 2340)
 scaled_concave = (clipped_concave - 100) / (2340 - 100)
 
+# Balance scaling
 clipped_balance = np.clip(lr_balance, 1, 2)
 scaled_balance = (clipped_balance - 1) / (2 - 1)
 
-results = {
+{
     "scaled_width": scaled_width,
     "scaled_skew": scaled_skew,
     "scaled_long": scaled_long,
     "scaled_concave": scaled_concave,
     "scaled_balance": scaled_balance
 }
-results
             `;
 
-            // Run Python code in Pyodide
-            const results = await pyodide.runPythonAsync(pythonCode);
+            try {
+                const results = await pyodide.runPythonAsync(pythonCode);
 
-            // Display results
-            document.getElementById('output').innerHTML = `
-                <p>Scaled Width: ${results.scaled_width.toFixed(4)}</p>
-                <p>Scaled Skew: ${results.scaled_skew.toFixed(4)}</p>
-                <p>Scaled Long: ${results.scaled_long.toFixed(4)}</p>
-                <p>Scaled Concave: ${results.scaled_concave.toFixed(4)}</p>
-                <p>Scaled Balance: ${results.scaled_balance.toFixed(4)}</p>
-            `;
+                // Display results
+                document.getElementById('output').innerHTML = `
+                    <p>Scaled Width: ${results.scaled_width.toFixed(4)}</p>
+                    <p>Scaled Skew: ${results.scaled_skew.toFixed(4)}</p>
+                    <p>Scaled Long: ${results.scaled_long.toFixed(4)}</p>
+                    <p>Scaled Concave: ${results.scaled_concave.toFixed(4)}</p>
+                    <p>Scaled Balance: ${results.scaled_balance.toFixed(4)}</p>
+                `;
+            } catch (error) {
+                console.error(error);
+                document.getElementById('output').innerHTML = `<p>Error calculating results. Check the console for details.</p>`;
+            }
         }
     </script>
 </body>
