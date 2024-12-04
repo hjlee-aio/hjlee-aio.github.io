@@ -23,6 +23,9 @@
     <div class="output" id="output"></div>
 
     <script>
+        let pyodideReady;
+
+        // Load Pyodide and required packages
         async function loadPyodideAndPackages() {
             const pyodide = await loadPyodide();
             await pyodide.loadPackage("numpy"); // Load NumPy for calculations
@@ -30,19 +33,26 @@
             return pyodide;
         }
 
-        let pyodideReady = loadPyodideAndPackages();
+        // Initialize Pyodide loading when the page is loaded
+        pyodideReady = loadPyodideAndPackages();
 
+        // Define the calculate function globally
         async function calculate() {
             const pyodide = await pyodideReady;
 
-            // Get user inputs
+            // Get user inputs and validate
             const x_ratio = parseFloat(document.getElementById('x_ratio').value || 0);
             const angle_degrees_max = parseFloat(document.getElementById('angle_degrees_max').value || 0);
             const wh_ratio = parseFloat(document.getElementById('wh_ratio').value || 0);
             const convex_defection = parseFloat(document.getElementById('convex_defection').value || 0);
             const lr_balance = parseFloat(document.getElementById('lr_balance').value || 0);
 
-            // Python script
+            if (isNaN(x_ratio) || isNaN(angle_degrees_max) || isNaN(wh_ratio) || isNaN(convex_defection) || isNaN(lr_balance)) {
+                document.getElementById('output').innerHTML = "<p>Please enter valid numbers!</p>";
+                return;
+            }
+
+            // Python script for calculations
             const pythonCode = `
                 import numpy as np
                 import json
@@ -53,21 +63,27 @@
                 convex_defection = ${convex_defection}
                 lr_balance = ${lr_balance}
 
+                # Width scaling
                 clipped_width = np.clip(x_ratio, 225, 520)
                 scaled_width = (clipped_width - 225) / (520 - 225)
 
+                # Skew scaling
                 clipped_skew = np.clip(angle_degrees_max, 0, 17)
                 scaled_skew = (clipped_skew - 0) / (17 - 0)
 
+                # Long scaling
                 clipped_long = np.clip(wh_ratio, 1, 2)
                 scaled_long = (clipped_long - 1) / (2 - 1)
 
+                # Concave scaling
                 clipped_concave = np.clip(convex_defection, 100, 2340)
                 scaled_concave = (clipped_concave - 100) / (2340 - 100)
 
+                # Balance scaling
                 clipped_balance = np.clip(lr_balance, 1, 2)
                 scaled_balance = (clipped_balance - 1) / (2 - 1)
 
+                # Convert to JSON
                 json.dumps({
                     "scaled_width": scaled_width,
                     "scaled_skew": scaled_skew,
@@ -81,6 +97,7 @@
                 const resultsJson = await pyodide.runPythonAsync(pythonCode);
                 console.log("Raw JSON from Python:", resultsJson);
 
+                // Parse JSON output
                 const results = JSON.parse(resultsJson);
                 console.log("Parsed Results:", results);
 
@@ -91,6 +108,7 @@
                 const scaledConcave = results.scaled_concave ?? 0;
                 const scaledBalance = results.scaled_balance ?? 0;
 
+                // Display results
                 document.getElementById('output').innerHTML = `
                     <p>Scaled Width: ${scaledWidth.toFixed(4)}</p>
                     <p>Scaled Skew: ${scaledSkew.toFixed(4)}</p>
@@ -103,3 +121,9 @@
                 document.getElementById('output').innerHTML = `<p>Error calculating results. Check the console for details.</p>`;
             }
         }
+
+        // Ensure the calculate function is globally accessible
+        window.calculate = calculate;
+    </script>
+</body>
+</html>
